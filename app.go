@@ -3,6 +3,7 @@ package maple
 import (
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+	"github.com/xbmlz/maple/hook"
 	"io"
 	"log/slog"
 	"os"
@@ -21,6 +22,8 @@ type App struct {
 	logger *slog.Logger
 
 	RootCmd *cobra.Command
+
+	onBeforeServe *hook.Hook[*ServeEvent]
 }
 
 type Config struct {
@@ -138,10 +141,8 @@ func (a *App) Logger() *slog.Logger {
 	return a.logger
 }
 
-func (a *App) initLogger() error {
-	// TODO
-	a.logger = slog.Default()
-	return nil
+func (a *App) OnBeforeServe() *hook.Hook[*ServeEvent] {
+	return a.onBeforeServe
 }
 
 // eagerParseFlags parses the global app flags before calling pb.RootCmd.Execute().
@@ -177,7 +178,7 @@ func inspectRuntime() (baseDir string, withGoRun bool) {
 	return
 }
 
-// newErrWriter returns a red colored stderr writter.
+// newErrWriter returns a red colored stderr writer.
 func newErrWriter() *coloredWriter {
 	return &coloredWriter{
 		w: os.Stderr,
@@ -199,4 +200,4 @@ func (colored *coloredWriter) Write(p []byte) (n int, err error) {
 	return colored.c.Print(string(p))
 }
 
-// newOutWriter returns a green colored stdout writter.
+// newOutWriter returns a green colored stdout writer.

@@ -12,23 +12,28 @@ type ServeConfig struct {
 	AllowedOrigins []string
 }
 
-func Serve(app *App, config ServeConfig) error {
+func Serve(a *App, config ServeConfig) error {
 	if len(config.AllowedOrigins) == 0 {
 		config.AllowedOrigins = []string{"*"}
 	}
 
 	mainAddr := config.HttpAddr
 
-	a := fiber.New()
+	app := fiber.New(fiber.Config{})
 
-	a.Get("/", func(c fiber.Ctx) error {
+	app.Get("/", func(c fiber.Ctx) error {
 		// Send a string response to the client
 		return c.SendString("Hello, World 👋!")
 	})
 
-	return a.Listen(mainAddr)
-}
+	serveEvent := &ServeEvent{
+		App:    a,
+		Router: app,
+	}
 
-func InitAPI(app App) {
+	if err := a.OnBeforeServe().Trigger(serveEvent); err != nil {
+		return err
+	}
 
+	return app.Listen(mainAddr)
 }
