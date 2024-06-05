@@ -131,6 +131,13 @@ func (a *App) Bootstrap() error {
 	return nil
 }
 
+func (a *App) Logger() *slog.Logger {
+	if a.logger == nil {
+		return slog.Default()
+	}
+	return a.logger
+}
+
 func (a *App) initLogger() error {
 	// TODO
 	a.logger = slog.Default()
