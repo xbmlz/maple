@@ -60,11 +60,8 @@ func New(config ...Config) *App {
 
 // Start starts the application.
 func (app *App) Start() error {
-	log.Debug("Starting Maple...")
-
-	if app.hooks != nil {
-		app.hooks.executeOnStart()
-	}
+	app.hooks.executeOnStart()
+	log.Debug("Started Maple...")
 	return nil
 }
 
