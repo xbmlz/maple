@@ -60,11 +60,15 @@ func New(config ...Config) *App {
 
 // Start starts the application.
 func (app *App) Start() error {
-
 	log.Debug("Starting Maple...")
 
 	if app.hooks != nil {
 		app.hooks.executeOnStart()
 	}
 	return nil
+}
+
+// Hooks returns the hook struct to register hooks.
+func (app *App) Hooks() *Hooks {
+	return app.hooks
 }
