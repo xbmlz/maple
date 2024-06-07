@@ -3,8 +3,10 @@ package maple
 import (
 	"github.com/spf13/cobra"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sync"
+	"syscall"
 )
 
 // Version of current package
@@ -68,6 +70,27 @@ func New(config ...Config) *App {
 // Start starts the application.
 func (app *App) Start() error {
 	app.RootCmd.AddCommand(httpServerCommand(app))
+
+	done := make(chan bool, 1)
+
+	// listen for interrupt signal to gracefully shutdown the application
+	go func() {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+		<-sigCh
+
+		done <- true
+	}()
+
+	// execute the root command
+	go func() {
+		// note: leave to the commands to decide whether to print their error
+		_ = app.RootCmd.Execute()
+		done <- true
+	}()
+
+	<-done
+
 	return nil
 }
 
