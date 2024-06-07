@@ -1,8 +1,9 @@
 package maple
 
 import (
-	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/log"
+	"github.com/spf13/cobra"
+	"os"
+	"path/filepath"
 	"sync"
 )
 
@@ -16,8 +17,8 @@ type App struct {
 	config Config
 	// Hooks
 	hooks *Hooks
-	// fiber server
-	server *fiber.App
+	// Command
+	RootCmd *cobra.Command
 }
 
 // Config is a struct holding the application settings.
@@ -39,6 +40,13 @@ func New(config ...Config) *App {
 	// Create a new app
 	app := &App{
 		config: Config{},
+		RootCmd: &cobra.Command{
+			Use:                filepath.Base(os.Args[0]),
+			Short:              "Maple CLI",
+			Version:            Version,
+			FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
+			CompletionOptions:  cobra.CompletionOptions{DisableDefaultCmd: true},
+		},
 	}
 
 	// Define hooks
@@ -49,19 +57,17 @@ func New(config ...Config) *App {
 		app.config = config[0]
 	}
 
-	// Override default values
-	if app.config.DataDir == "" {
-		app.config.DataDir = DefaultDataDir
-	}
+	app.RootCmd.PersistentFlags().BoolVar(&app.config.IsDev, "dev", DefaultIsDev, "enable dev mode, aka. printing logs and sql statements to the console")
+	app.RootCmd.PersistentFlags().StringVar(&app.config.DataDir, "data-dir", DefaultDataDir, "the directory that contains the database, log files, etc.")
 
+	_ = app.RootCmd.ParseFlags(os.Args[1:])
 	// Return app
 	return app
 }
 
 // Start starts the application.
 func (app *App) Start() error {
-	app.hooks.executeOnStart()
-	log.Debug("Started Maple...")
+	app.RootCmd.AddCommand(httpServerCommand(app))
 	return nil
 }
 
