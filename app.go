@@ -2,9 +2,11 @@ package maple
 
 import (
 	"github.com/spf13/cobra"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 )
@@ -17,6 +19,8 @@ type App struct {
 	mutex sync.Mutex
 	// App config
 	config Config
+	// App logger
+	logger *slog.Logger
 	// Hooks
 	hooks *Hooks
 	// Command
@@ -32,9 +36,9 @@ type Config struct {
 }
 
 // Default Config values
-const (
-	DefaultDataDir = "./data"
-	DefaultIsDev   = true
+var (
+	DefaultDataDir string
+	DefaultIsDev   bool
 )
 
 // New creates a new Maple named instance.
@@ -57,6 +61,14 @@ func New(config ...Config) *App {
 	// Override config if provided
 	if len(config) > 0 {
 		app.config = config[0]
+	}
+
+	baseDir, isUsingGoRun := inspectRuntime()
+	if app.config.DataDir == "" {
+		DefaultDataDir = filepath.Join(baseDir, "data")
+	}
+	if app.config.IsDev == false {
+		DefaultIsDev = isUsingGoRun
 	}
 
 	app.RootCmd.PersistentFlags().BoolVar(&app.config.IsDev, "dev", DefaultIsDev, "enable dev mode, aka. printing logs and sql statements to the console")
@@ -97,4 +109,32 @@ func (app *App) Start() error {
 // Hooks returns the hook struct to register hooks.
 func (app *App) Hooks() *Hooks {
 	return app.hooks
+}
+
+// DataDir returns the data directory.
+func (app *App) DataDir() string {
+	return app.config.DataDir
+}
+
+// Logger returns the default app logger.
+func (app *App) Logger() *slog.Logger {
+	if app.logger == nil {
+		return slog.Default()
+	}
+
+	return app.logger
+}
+
+// inspectRuntime tries to find the base executable directory and how it was run.
+func inspectRuntime() (baseDir string, withGoRun bool) {
+	if strings.HasPrefix(os.Args[0], os.TempDir()) {
+		// probably ran with go run
+		withGoRun = true
+		baseDir, _ = os.Getwd()
+	} else {
+		// probably ran with go build
+		withGoRun = false
+		baseDir = filepath.Dir(os.Args[0])
+	}
+	return
 }

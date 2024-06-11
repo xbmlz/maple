@@ -1,6 +1,7 @@
 package maple
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"time"
@@ -22,7 +23,13 @@ func NewHTTPServer(app *App, config HTTPServerConfig) error {
 
 	mainAddr := config.HttpAddr
 
-	router := gin.New()
+	router := initRouter(app)
+
+	// configure cors
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: config.AllowedOrigins,
+		AllowMethods: []string{http.MethodGet, http.MethodHead, http.MethodPut, http.MethodPatch, http.MethodPost, http.MethodDelete},
+	}))
 
 	server := &http.Server{
 		ReadTimeout:       10 * time.Minute,
@@ -40,5 +47,13 @@ func NewHTTPServer(app *App, config HTTPServerConfig) error {
 	// OnBeforeServer
 	app.hooks.executeOnBeforeServer(hook)
 
+	// print banner
+
 	return server.ListenAndServe()
+}
+
+func initRouter(app *App) *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
+	router := gin.New()
+	return router
 }
